@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+            "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zzu.wcj.dao.IMajorDAO">
+       
+        <!-- 根据ID查询详细的专业信息 -->
+        <select id="findById" parameterType="java.lang.Integer" resultMap="MajorMap" >
+             SELECT major_id,major_name,note,create_time 
+             FROM major
+             WHERE major_id=#{id}
+        </select>
+        <resultMap type="Major" id="MajorMap">
+            <id column="major_id" property="majorId"/>
+            <result column="major_name" property="majorName"/>
+            <result column="note" property="note"/>
+            <result column="create_time" property="createTime"/>
+            <collection property="clazzs" ofType="Clazz" 
+                        column="major_id" select="findClazzsByMajorId">
+            </collection>
+        </resultMap>    
+        <select id="findClazzsByMajorId" parameterType="java.lang.Integer" resultType="Clazz">
+              SELECT  clazz_id clazzId, clazz_name clazzName
+              FROM clazz
+              WHERE major_id=#{majorId}
+        </select>
+        
+        <!-- 增加专业信息 -->
+        <insert id="doCreate" parameterType="Major">
+             INSERT INTO major(major_id,major_name,note,create_time)
+                         VALUES(major_seq.NEXTVAL,#{majorName},#{note},#{createTime})  
+        </insert>
+        
+        <!-- 修改专业 ,创建时间不能修改-->
+        <update id="doUpdate" parameterType="Major">
+            UPDATE major SET major_name=#{majorName},note=#{note}
+            WHERE major_id=#{majorId}
+        </update>
+        
+        <!-- 复杂查询 -->
+        <select id="findAll" parameterType="java.lang.String" resultType="Major">
+              SELECT major_id majorId,major_name majorName,note,create_time createTime
+              FROM major
+              WHERE major_id LIKE #{keyWord} OR UPPER(major_name) LIKE #{keyWord}
+                    OR UPPER(note) LIKE #{keyWord} OR create_time LIKE #{keyWord}
+        </select>
+      
+      
+        <!-- 删除专业是一项非常复杂的业务 -->
+        <!-- 1.删除分数表-->
+        <delete id="doRemoveScore" parameterType="java.lang.Integer">
+            DELETE FROM score WHERE student_id IN(
+                                           SELECT student_id
+                                           FROM student
+                                           WHERE clazz_id IN(
+                                                      SELECT clazz_id
+                                                      FROM  clazz
+                                                      WHERE  major_id=#{majorId} 
+                                           ) 
+            )
+        </delete>
+        <!-- 2.删除学生表 -->
+        <delete id="doRemoveStudent" parameterType="java.lang.Integer">
+              DELETE FROM student WHERE clazz_id IN(
+                                             SELECT clazz_id
+                                             FROM clazz
+                                             WHERE major_id=#{majorId}     
+              )
+        </delete>
+        <!-- 3.删除教学表 -->
+        <delete id="doRemoveTeach" parameterType="java.lang.Integer">
+              DELETE FROM teach WHERE clazz_id IN(
+                                SELECT clazz_id
+                                FROM clazz
+                                WHERE major_id =#{majorId}
+              )
+        </delete>
+        <!-- 4.删除班级表 -->
+        <delete id="doRemoveClazz" parameterType="java.lang.Integer">
+            DELETE FROM clazz WHERE major_id=#{majorId}
+        </delete>
+        <!-- 5.删除专业表 -->
+        <delete id="doRemove" parameterType="java.lang.Integer">
+            DELETE FROM major WHERE major_id=#{id}
+        </delete>
+        
+        <select id="findMajorByName" parameterType="java.lang.String" resultType="Major">
+           SELECT major_id majorId,major_name majorName,note,create_time createTime
+           FROM major
+           WHERE major_name=#{majorName}
+        </select>
+        
+
+
+</mapper>            

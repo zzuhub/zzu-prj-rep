@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+            "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zzu.wcj.dao.ITeacherDAO">
+     
+        <select id="findById" parameterType="java.lang.Integer" resultMap="TeacherMap" >
+               SELECT teacher_id,teacher_name FROM teacher WHERE teacher_id=#{id}
+        </select>
+        <resultMap type="Teacher" id="TeacherMap">
+               <id column="teacher_id" property="teacherId"/>
+               <result column="teacher_name" property="teacherName"/>
+               <collection property="courses" ofType="Course" 
+                           column="teacher_id" select="findCoursesByTeacherId">
+               </collection>
+        </resultMap>
+        <select id="findCoursesByTeacherId" parameterType="java.lang.Integer" resultType="Course">
+            SELECT course_id courseId,course_name courseName,
+                   credit,note,term 
+			FROM course
+			WHERE course_id IN(
+                         SELECT DISTINCT course_id
+                         FROM teach
+                         WHERE teacher_id=#{teacherId}
+            )         
+        </select>
+        
+        <update id="doUpdate" parameterType="Teacher">
+                UPDATE teacher SET teacher_name=#{teacherName} WHERE teacher_id=#{teacherId} 
+        </update>
+        
+        <insert id="doCreate" parameterType="Teacher">
+              INSERT INTO teacher(teacher_id,teacher_name)VALUES(teacher_seq.NEXTVAL,#{teacherName})
+        </insert>
+        
+        <delete id="doRemove" parameterType="java.lang.Integer">
+              DELETE FROM teacher WHERE teacher_id=#{id}
+        </delete>
+        
+        <delete id="doRemovePre" parameterType="java.lang.Integer">
+             DELETE FROM teach WHERE teacher_id=#{teacherId}
+        </delete>
+        
+        <select id="findAll" parameterType="java.lang.String" resultType="Teacher">
+             SELECT teacher_id teacherId,teacher_name teacherName
+             FROM teacher
+             WHERE teacher_id LIKE #{keyWord} OR UPPER(teacher_name) LIKE #{keyWord}
+        </select>
+      
+      
+      
+     
+       
+
+</mapper>            

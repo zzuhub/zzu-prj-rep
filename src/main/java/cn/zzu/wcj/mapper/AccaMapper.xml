@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+            "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zzu.wcj.dao.IAccaDAO">
+        
+        <!--根据学号查找学生所在专业的总人数-->
+        <select id="findAllCount" parameterType="java.lang.String" resultType="java.lang.Integer">
+            SELECT COUNT(student_id)
+			FROM  student 
+			WHERE clazz_id IN(
+			            SELECT clazz_id
+			            FROM clazz
+			            WHERE major_id=(
+			                     SELECT major_id
+			                     FROM major
+			                     WHERE major_id=(
+			                            SELECT major_id
+			                            FROM clazz
+			                            WHERE clazz_id=(
+			                                  SELECT clazz_id
+			                                  FROM student
+			                                  WHERE student_id=#{studentId}
+			                            )
+			                     )
+			            )
+			)  
+        </select>
+      
+       <!-- 根据学号,查找学生的排名 -->
+       <!-- 这里主要使用了Oracle伪列ROWNUM的特性,要是换成MySQL我估计就懵逼了,回头我思考一下 -->
+       <select id="findRankByStudentId" parameterType="java.lang.String" resultType="java.lang.Integer">
+                SELECT tmp.rn
+				FROM  (
+				        SELECT ROWNUM rn,temp.*
+				        FROM (
+								SELECT  T1.sid , T1.gpa
+								FROM  (
+								        SELECT S.student_id sid,ROUND(SUM((C.credit*S.score)/100)) gpa
+										FROM score S,course C
+										WHERE S.score>=60 
+										         AND
+										      S.course_id=C.course_id
+										GROUP BY S.student_id  
+								     ) T1  ,
+								     (
+								        SELECT student_id ,student_name
+										FROM  student 
+										WHERE clazz_id IN(
+										            SELECT clazz_id
+										            FROM clazz
+										            WHERE major_id=(
+										                     SELECT major_id
+										                     FROM major
+										                     WHERE major_id=(
+										                            SELECT major_id
+										                            FROM clazz
+										                            WHERE clazz_id=(
+										                                  SELECT clazz_id
+										                                  FROM student
+										                                  WHERE student_id='2014888'
+										                            )
+										                     )
+										            )
+										     )   
+								      ) T2
+								WHERE T1.sid=T2.student_id 
+								ORDER BY gpa DESC 
+				            ) temp  
+				       )tmp
+				WHERE tmp.sid=#{studentId}  
+       </select>
+
+       <!-- 根据学号查询每学期修够的学分和总学分 -->
+       <select id="findCreditPerTermAccasByStudentId" 
+               parameterType="java.lang.String"
+               resultType="CreditPerTermAcca">
+            SELECT T1.term term,NVL(T2.sum_pass,0) sumPassCredit ,T1.sum sumCredit
+			FROM (
+			        SELECT term,SUM(credit) sum
+					FROM score S , course C
+					WHERE S.course_id=C.course_id AND S.student_id=#{studentId}
+					GROUP BY term
+			     ) T1  ,
+			     (
+			        SELECT term,SUM(NVL(credit,0)) sum_pass
+					FROM score S , course C
+					WHERE S.course_id=C.course_id AND S.student_id=#{studentId} AND score>=60
+					GROUP BY term
+			     )  T2
+			WHERE T1.term=T2.term(+)
+       </select>
+
+
+
+</mapper>            

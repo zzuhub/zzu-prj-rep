@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+            "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zzu.wcj.dao.IRoleDAO">
+  
+  <!-- 根据ID查找角色 -->
+   <select id="findById" parameterType="java.lang.Integer" resultMap="RoleMap"  >
+        SELECT role_id , role_name  FROM shiro_role WHERE role_id=#{id} 
+   </select>
+   <resultMap type="Role" id="RoleMap">
+       <id column="role_id" property="roleId"/>
+       <result column="role_name" property="roleName"/>
+       <collection property="permissions" ofType="Permission" 
+                   column="role_id" select="findPermsByRoleId">
+       </collection>
+   </resultMap>
+   <select id="findPermsByRoleId" parameterType="java.lang.Integer" resultType="Permission">
+         SELECT permission_id permissionId,permission_name permissionName,
+                permission_note permissionNote
+         FROM shiro_permission 
+         WHERE permission_id IN(
+                         SELECT permission_id 
+                         FROM shiro_role_permission 
+                         WHERE role_id=#{roleId})
+   </select>
+   
+   <!-- 增加角色 -->
+   <insert id="doCreate" parameterType="Role">
+        INSERT INTO shiro_role(role_id,role_name)VALUES(role_seq.nextVal,#{roleName})     
+   </insert>
+   <insert id="doCreateAfter" parameterType="java.util.List">
+         INSERT INTO shiro_role_permission(role_permission_id,role_id,permission_id)
+         SELECT role_permission_seq.nextVal,temp.* 
+         FROM(
+              <foreach collection="list" item="item" index="index" separator="UNION">
+                  SELECT #{item.roleId}, #{item.permissionId} FROM dual 
+              </foreach> 
+         )temp
+   </insert>
+   
+   <!-- 查找序列 -->
+   <select id="findCurrSeq" resultType="java.lang.Integer">
+       SELECT role_seq.currVal FROM dual 
+   </select>
+   
+   
+   <update id="doUpdate" parameterType="Role">
+         UPDATE shiro_role SET role_name=#{roleName} WHERE role_id=#{roleId} 
+   </update>
+   
+   <delete id="doRemove" parameterType="java.lang.Integer">
+         DELETE FROM shiro_role WHERE role_id=#{id} 
+   </delete>
+   
+   <delete id="doRemovePre" parameterType="java.lang.Integer">
+         DELETE FROM shiro_role_permission WHERE role_id=#{roleId}
+   </delete>
+   
+   <select id="findByUserName" parameterType="java.lang.String" resultType="java.lang.String">
+         SELECT  role_name
+         FROM shiro_role
+         WHERE role_id IN(
+                   SELECT role_id
+		           FROM shiro_user_role
+		           WHERE user_id IN(
+		                      SELECT user_id
+				              FROM shiro_user
+				              WHERE user_name=#{userName}
+		                      )
+                    )      
+   </select>
+   
+   <!-- 删除shiro_user_role表中的关联数据 -->
+   <delete id="doRemoveUserRoleTabById" parameterType="java.lang.Integer">
+         DELETE FROM shiro_user_role WHERE role_id=#{id}   
+   </delete>
+   
+   <select id="findAll" resultType="Role">
+      SELECT role_id roleId,role_name roleName
+      FROM shiro_role 
+   </select>
+   
+   <select id="findByName" parameterType="java.lang.String" resultType="Role">
+         SELECT role_id roleID,role_name roleName 
+         FROM shiro_role
+         WHERE role_name=#{roleName}
+   </select>
+   
+   
+</mapper>            

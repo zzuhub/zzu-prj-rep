@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+            "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zzu.wcj.dao.IPermissionDAO">
+     <select id="findById" parameterType="java.lang.Integer" resultType="Permission">
+            SELECT permission_id permissionId ,permission_name permissionName,
+                   permission_note permissionNote
+            FROM shiro_permission
+            WHERE permission_id=#{id} 
+     </select>
+     <select id="findByUserName" parameterType="java.lang.String" resultType="String">
+         SELECT permission_name 
+         FROM shiro_permission 
+         WHERE permission_id IN (
+                                SELECT permission_id 
+                                FROM shiro_role_permission 
+                                WHERE role_id IN(
+			                                 SELECT role_id 
+			                                 FROM shiro_role
+			                                 WHERE role_id IN(
+			                                            SELECT role_id  
+			                                            FROM shiro_user_role 
+			                                            WHERE user_id IN(
+									                               SELECT user_id 
+									                               FROM shiro_user 
+									                               WHERE user_name = #{userName})  
+									                     )
+									           )
+							      )
+     </select>
+     <insert id="doCreate" parameterType="Permission">
+              INSERT INTO shiro_permission(permission_id,permission_name,permission_note)
+                                    VALUES(#{permissionId},#{permissionName},#{permissionNote})     
+     </insert>
+     <update id="doUpdate" parameterType="Permission">
+            UPDATE shiro_permission 
+            SET permission_name = #{permissionName}，permission_note=#{permissionNote}
+            WHERE permission_id=#{permissionId}
+     </update>
+     <delete id="doRemove" parameterType="java.lang.Integer">
+            DELETE FROM shiro_permission WHERE permission_id = #{id}
+     </delete>
+     
+     <!-- 查询全部权限 -->
+     <select id="findAll" resultType="Permission">
+        SELECT permission_id permissionId, permission_name permissionName, 
+               permission_note permissionNote
+        FROM shiro_permission
+     </select>
+     
+     
+     
+     
+</mapper>

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+            "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zzu.wcj.dao.IScoreDAO">
+       
+       <!-- 根据ID查询 -->
+       <select id="findById" parameterType="java.lang.Integer" resultMap="ScoreMap">
+           SELECT score_id,score
+           FROM score
+           WHERE score_id=#{id}
+       </select>
+      <resultMap type="Score" id="ScoreMap">
+         <id column="score_id" property="scoreId" />
+         <result column="score" property="score" />
+         <association property="student" column="score_id" select="findStudentByScoreId">
+         </association>
+         <association property="course" column="score_id" select="findCourseByScoreId">
+         </association>
+      </resultMap>
+      <select id="findStudentByScoreId" parameterType="java.lang.Integer" resultType="Student">
+          SELECT student_id studentId,student_name studentName,clazz_id clazzId  ,
+                 sex,age,address,birth,password,tel,photo,note  
+          FROM student
+          WHERE student_id =(
+                     SELECT student_id
+                     FROM score
+                     WHERE score_id=#{scoreId}
+          )
+      </select>
+      <select id="findCourseByScoreId" parameterType="java.lang.Integer" resultType="Course">
+           SELECT course_id courseId,course_name courseName,credit ,note , term  
+           FROM course
+           WHERE course_id=(
+                    SELECT course_id
+                    FROM score
+                    WHERE score_id=#{scoreId}
+           )
+      </select>
+      
+      <insert id="doCreate" parameterType="Score">
+          INSERT INTO score(score_id,student_id,course_id,score)
+          VALUES(score_seq.NEXTVAL,#{student.studentId},#{course.courseId},#{score})
+      </insert>
+      
+      <!-- 更新时只允许改成绩,其他不允许变动 -->
+      <update id="doUpdate" parameterType="Score">
+         UPDATE score 
+         SET score=#{score}
+         WHERE score_id=#{scoreId}
+      </update>
+      
+      <delete id="doRemove" parameterType="java.lang.Integer">
+            DELETE FROM score WHERE score_id=#{id} 
+      </delete>
+      
+      
+      <!-- 根据关键词进行查询 -->
+      <select id="findAll" parameterType="java.lang.String" resultMap="ScoreMap">
+           SELECT score_id,score
+           FROM score
+           WHERE score_id LIKE #{keyWord}
+                 OR student_id IN(
+		                    SELECT student_id
+		                    FROM  student
+		                    WHERE student_id LIKE #{keyWord} OR UPPER(student_name) LIKE #{keyWord}
+                 )
+                 OR course_id IN(
+                           SELECT course_id
+                           FROM course
+                           WHERE course_id LIKE #{keyWord} OR UPPER(course_name) LIKE #{keyWord} 
+                           
+                 )
+                 OR score LIKE #{keyWord}
+            ORDER BY score_id
+      </select>
+      
+      <insert id="doCreateBatch" parameterType="java.util.List">
+          INSERT INTO score(score_id,student_id,course_id,score)
+          SELECT score_seq.NEXTVAL,temp.*
+          FROM (
+                <foreach collection="list" index="index" item="score" separator="UNION">
+                   SELECT #{score.student.studentId},
+                          #{score.course.courseId},#{score.score}
+                   FROM dual 
+                </foreach>
+          ) temp
+      </insert>
+      
+      <!-- 根据学号和学期查询成绩列表 -->
+      <!-- 使用Map集合测试一下多台是否管用 -->
+      <select id="findByStudentIdAndTerm" parameterType="java.util.Map" resultMap="ScoreMap">
+          SELECT score_id,score
+          FROM score
+          WHERE student_id=#{studentId}
+                      AND
+                course_id IN(
+                        SELECT course_id
+                        FROM course
+                        WHERE term=#{term}
+                        
+                )  
+      </select>
+      
+</mapper>            

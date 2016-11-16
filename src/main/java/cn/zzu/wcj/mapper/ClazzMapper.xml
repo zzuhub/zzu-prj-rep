@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+            "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zzu.wcj.dao.IClazzDAO">
+        
+        <!-- 根据ID查询班级信息 -->
+        <select id="findById" parameterType="java.lang.Integer" resultMap="ClazzMap">
+               SELECT clazz_id,clazz_name,major_id
+               FROM clazz
+               WHERE clazz_id=#{id}
+        </select>
+        <resultMap type="Clazz" id="ClazzMap">
+              <id column="clazz_id" property="clazzId"/>
+              <result column="clazz_name" property="clazzName"/>
+              <!-- 1对1关联 -->
+              <association property="major" column="major_id" select="findMajorByMajorId">
+              </association>   
+        </resultMap>
+        <select id="findMajorByMajorId" parameterType="java.lang.Integer" resultType="Major">
+              SELECT major_id majorId,major_name majorName,note,create_time createTime
+              FROM major
+              WHERE major_id=#{majorId}
+        </select>
+
+        
+        <!-- 做项目中意外发现MyBatis支持级联属性 -->
+        <update id="doUpdate" parameterType="Clazz">
+              UPDATE clazz SET clazz_name=#{clazzName},major_id=#{major.majorId}
+              WHERE clazz_id=#{clazzId}
+        </update>
+        
+        <!-- 增加 -->
+        <insert id="doCreate" parameterType="Clazz">
+             INSERT INTO clazz(clazz_id,clazz_name,major_id)
+                       VALUES(clazz_seq.NEXTVAL,#{clazzName},#{major.majorId})
+        </insert>
+        
+        <!-- 复杂查询 -->
+        <select id="findAll" parameterType="java.lang.String" resultMap="ClazzMap">
+             SELECT clazz_id,clazz_name,major_id
+             FROM clazz
+             WHERE clazz_id LIKE #{keyWord} OR UPPER(clazz_name) LIKE #{keyWord}
+                    OR major_id LIKE #{keyWord}
+        </select>
+        
+        <!-- 删除功能是一项非常复杂的业务 -->
+        <!-- 1.删除 teach表对应的数据-->
+        <delete id="doRemoveTeach" parameterType="java.lang.Integer">
+           DELETE FROM teach WHERE clazz_id=#{clazzId}
+        </delete>
+        <!-- 2.删除score表对应的数据 -->
+        <delete id="doRemoveScore" parameterType="java.lang.Integer">
+           DELETE FROM score WHERE student_id IN(
+                                          SELECT  student_id
+                                          FROM student
+                                          WHERE clazz_id=#{clazzId}  )
+        </delete>
+        <!-- 3.删除student表对应的数据 -->
+        <delete id="doRemoveStudent" parameterType="java.lang.Integer">
+            DELETE FROM student WHERE clazz_id=#{clazzId}
+        </delete>
+        <!-- 4.删除clazz表对应的数据 -->
+        <delete id="doRemove" parameterType="java.lang.Integer">
+            DELETE FROM clazz WHERE clazz_id=#{clazzId}
+        </delete>
+        
+        <select id="findByName" parameterType="java.lang.String" resultMap="ClazzMap" >
+            SELECT clazz_id ,clazz_name,major_id
+            FROM clazz 
+            WHERE clazz_name=#{clazzName}
+        </select>
+        
+        
+        <select id="findClazzsByMajorId" parameterType="java.lang.Integer" resultType="Clazz">
+                 SELECT clazz_id clazzId,clazz_name clazzName,major_id majorId
+                 FROM clazz
+                 WHERE major_id=#{majorId}
+        </select>
+
+
+
+</mapper>            

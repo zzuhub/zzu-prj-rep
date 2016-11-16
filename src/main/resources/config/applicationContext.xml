@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.2.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.2.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.2.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.2.xsd">
+     <!-- 配置自动扫描 -->
+     <context:component-scan base-package="cn.zzu.wcj">
+          <context:exclude-filter type="annotation" 
+                  expression="org.springframework.stereotype.Controller"/>
+          <context:exclude-filter type="annotation" 
+                  expression="org.springframework.web.bind.annotation.ControllerAdvice"/>         
+     </context:component-scan>
+
+    <!-- 配置DBCP数据源 -->
+    <context:property-placeholder location="classpath:db.properties"/>
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+         <!-- 数据库连接基本属性 -->
+         <property name="driverClassName" value="${jdbc.driverClassName}"></property>
+         <property name="url" value="${jdbc.url}"></property>
+         <property name="username" value="${jdbc.username}"></property>
+         <property name="password" value="${jdbc.password}"></property>
+         <!-- 配置連接池 -->
+         <property name="initialSize" value="6"></property>
+         <property name="maxIdle" value="8"></property>
+         <property name="maxActive" value="28"></property>
+         <property name="minIdle" value="28"></property>
+         <property name="maxWait" value="60000"></property>
+    </bean>  
+      
+    <!-- Spring整合MyBtis,不需要MyBatis配置文件 --> 
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"></property>
+        <!-- 自动扫描*Mapper.xml文件 -->
+        <property name="mapperLocations" value="classpath:cn/zzu/wcj/mapper/*Mapper.xml"></property>
+        <!-- 导入mybatis-config.xml配置文件 -->
+        <property name="configLocation" value="classpath:mybatis-config.xml"></property>
+        <!-- 配置Entity前缀 -->
+        <property name="typeAliasesPackage" value="cn.zzu.wcj.entity"></property>
+    </bean>
+    
+    <!-- DAO接口所在包,Spring会自动扫描其下的DAOImpl类-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+       <property name="basePackage" value="cn.zzu.wcj.dao"></property>
+       <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"></property>
+    </bean>
+    
+    <!-- 配置注解事务 -->
+    <bean id="transactionManager" 
+          class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+          <property name="dataSource" ref="dataSource"></property>
+    </bean>
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+
+
+    <!-- 配置Shiro -->
+    <!-- 1.配置Realm -->
+    <bean id="shiroDbRealm" class="cn.zzu.wcj.shiro.realm.ShiroDbRealm"></bean>
+    
+    <!-- 2.配置安全管理器 -->
+    <bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+       <property name="realm" ref="shiroDbRealm"></property>
+    </bean>
+    
+    <!-- 3.配置Shiro过滤器 -->
+    <bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+        <!-- 配置shiro安全接口 -->
+        <property name="securityManager" ref="securityManager"></property>
+        <!-- 配置身份认证失败时跳转的页面 -->
+        <property name="loginUrl" value="/login.jsp"></property>
+        <!-- 配置权限认证失败时跳转的页面 -->
+        <property name="unauthorizedUrl" value="/denied.jsp"></property>
+        <!-- 配置shiro过滤约束配置,即过滤链的定义 -->
+        <property name="filterChainDefinitions">
+	            <value>
+	                  /Student/doCreatePre=perms[Student:INSERT]
+	                  /Student/doCreateBatchPre=perms[Student:INSERT]
+	                  /Student/doEdit/**=perms[Student:UPDATE]
+	                  /Student/doRemove/**=perms[Student:DELETE]
+	                  
+	                  /Score/doCreatePre=perms[Score:INSERT]
+	                  /Score/doCreateBatchPre=perms[Score:INSERT]
+	                  /Score/doEdit/**=perms[Score:UPDATE]
+	                  /Score/doRemove/**=perms[Score:DELETE]
+	                  
+	                  /Course/doCreatePre=perms[Course:INSERT]
+	                  /Course/doBatchCreatePre=perms[Course:INSERT]
+	                  /Course/doEdit/**=perms[Course:UPDATE]
+	                  /Course/doRemove/**=perms[Course:DELETE]
+	                  
+	                  /Teacher/doCreatePre=perms[Teacher:INSERT]
+	                  /Teacher/doEdit/**=perms[Teacher:UPDATE]
+	                  /Teacher/doRemove/**=perms[Teacher:DELETE]
+	                  /Teach/doEdit/**=perms[Teach:UPDATE]
+	                  /Teach/doRemove/**=perms[Teach:DELETE]
+	                  
+	                  
+	                  /Clazz/doCreatePre=perms[Clazz:INSERT]
+	                  /Clazz/doEdit/**=perms[Clazz:UPDATE]
+	                  /Clazz/doRemove/**=perms[Clazz:DELETE]
+	                  
+	                  /Major/doCreatePre=perms[Major:INSERT]
+	                  /Major/doEdit/**=perms[Major:UPDATE]
+	                  /Major/doRemove/**=perms[Major:DELETE]
+	                  
+	                 /User/list=perms[User:SELECT]
+	                 /User/doEdit/**=perms[User:UPDATE]
+	                 /User/doRemove/**=perms[User:DELETE]
+	                 /User/doCreatePre=perms[User:INSERT]
+	                 
+	                 /Role/list=perms[Role:SELECT]
+	                 /Role/doCreatePre=perms[Role:INSERT]
+	                 /Role/doEdit/**=perms[Role:UPDATE]
+	                 /Role/doRemove/**=perms[Role:DELETE]
+	                 
+	                 /Permission=perms[Permission:SELECT]
+	            </value>
+	     </property>
+    </bean>
+    
+    <!-- 4.配置Shiro内部lifecycle函数的bean执行 -->
+    <bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor">
+    </bean>
+    
+    <!-- 5.配置Shiro注解 -->
+	<bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator" 
+	      depends-on="lifecycleBeanPostProcessor"/>  
+  	<bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">  
+  	    <property name="securityManager" ref="securityManager"/>  
+    </bean> 
+
+</beans>

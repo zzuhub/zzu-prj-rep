@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+            "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zzu.wcj.dao.IUserDAO">
+     
+     <insert id="doCreate" parameterType="User">
+          INSERT INTO shiro_user(user_id,user_name,password,create_time,update_time,last_login)
+                        VALUES(user_seq.nextVal,#{userName},#{password},#{createTime},NULL,NULL)   
+     </insert>
+     
+     <update id="doUpdate" parameterType="User">
+             UPDATE shiro_user 
+             SET user_name=#{userName},password=#{password},update_time=SYSDATE 
+             WHERE user_id=#{userId} 
+     </update>
+     
+     <select id="findById" parameterType="java.lang.Integer" resultMap="UserMap" >
+          SELECT user_id , user_name , password ,create_time , update_time ,last_login 
+           FROM shiro_user
+           WHERE user_id=#{id}
+     </select>
+     <resultMap type="User" id="UserMap">
+           <id column="user_id" property="userId"/>
+           <result column="user_name" property="userName"/>
+           <result column="password" property="password"/>
+           <result column="create_time" property="createTime"/>
+           <result column="update_time" property="updateTime"/>
+           <result column="last_login" property="lastLogin"/>
+           <collection property="roles" ofType="Role" column="user_id" select="findRolesById">
+           </collection>
+     </resultMap>
+     <select id="findRolesById" parameterType="java.lang.Integer" resultType="Role">
+          SELECT role_id roleId,role_name roleName 
+          FROM shiro_role
+          WHERE role_id IN(SELECT role_id FROM shiro_user_role WHERE user_id=#{userId})
+     </select>
+     
+     <delete id="doRemove" parameterType="java.lang.Integer">
+          DELETE FROM shiro_user WHERE user_id=#{id} 
+     </delete>
+     
+     <update id="doUpdateLastLogin" parameterType="User" >
+         UPDATE shiro_user SET last_login=SYSDATE WHERE user_name=#{userName} AND password=#{password}   
+     </update>
+     
+     <insert id="doCreateAfter" parameterType="java.util.List">
+         INSERT INTO shiro_user_role(user_role_id,user_id,role_id) 
+         SELECT user_role_seq.NEXTVAL,temp.* FROM(
+        <foreach collection="list" item="item" index="index" separator="UNION">
+            SELECT #{item.userId}, #{item.roleId} FROM dual 
+         </foreach>
+                                              ) temp 
+     </insert>
+     
+     <delete id="doRemovePre" parameterType="java.lang.Integer">
+            DELETE FROM shiro_user_role WHERE user_id=#{userId} 
+     </delete>
+     
+     <select id="findSeqCurrVal" resultType="java.lang.Integer">
+          SELECT user_seq.CURRVAL FROM dual 
+     </select>
+     
+     <select id="findByUserName" parameterType="java.lang.String" resultType="User">
+           SELECT user_id userId , user_name userName , password ,
+                 create_time createTime , update_time updateTime ,
+                 last_login    lastLogin
+           FROM shiro_user WHERE user_name=#{userName}   
+     </select>
+     
+     <select id="findAll" resultType="User">
+         SELECT user_id userId,user_name userName,password,
+                create_time createTime,update_time updateTime,
+                last_login lastLogin
+          FROM  shiro_user 
+     </select>
+     
+</mapper>            

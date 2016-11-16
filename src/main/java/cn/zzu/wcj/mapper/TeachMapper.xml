@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+            "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zzu.wcj.dao.ITeachDAO">
+    
+       <!-- 增加操作 -->
+       <insert id="doCreate" parameterType="Teach">
+          INSERT INTO teach(teach_id,clazz_id,course_id,teacher_id)
+                      VALUES(teach_seq.NEXTVAL,#{clazzId},#{courseId},#{teacherId})  
+       </insert>
+    
+       <!-- 查询操作 -->
+       <select id="findById" parameterType="java.lang.Integer" resultMap="TeachMap">
+           SELECT teach_id,teacher_id,course_id,clazz_id
+           FROM teach
+           WHERE teach_id=#{id}
+       </select>
+       <resultMap type="Teach" id="TeachMap">
+             <id column="teach_id" property="teachId" />
+             <result column="teacher_id" property="teacherId" />
+             <result column="course_id" property="courseId" />
+             <result column="clazz_id" property="clazzId" />
+             <association property="teacher" column="teacher_id" 
+                          select="findTeacherByTeacherId">
+             </association>
+             <association property="course" column="course_id" 
+                          select="findCourseByCourseId">
+             </association>
+             <association property="clazz" column="clazz_id" 
+                          select="findClazzByClazzId">
+             </association>
+       </resultMap>
+       <select id="findTeacherByTeacherId" parameterType="java.lang.Integer" 
+               resultType="Teacher">
+            SELECT teacher_id teacherId,teacher_name teacherName
+            FROM teacher
+            WHERE teacher_id=#{teacherId}
+       </select>
+       <select id="findCourseByCourseId" parameterType="java.lang.Integer"
+               resultType="Course">
+           SELECT course_id courseId,course_name courseName ,note,term ,credit
+           FROM course
+           WHERE course_id=#{courseId}  
+       </select>
+       <select id="findClazzByClazzId" parameterType="java.lang.Integer"
+               resultType="Clazz">
+           SELECT clazz_id clazzId, clazz_name clazzName,major_id majorId
+           FROM clazz
+           WHERE clazz_id=#{clazzId}  
+       </select>
+       
+       <!--模糊查询-->
+       <select id="findAll" parameterType="java.lang.String" resultMap="TeachMap">
+            SELECT teach_id,teacher_id,course_id,clazz_id
+            FROM teach 
+            ORDER BY teach_id 
+       </select>
+       
+       <!-- 修改 -->
+       <update id="doUpdate" parameterType="Teach">
+          UPDATE teach 
+          SET clazz_id=#{clazzId},course_id=#{courseId} ,teacher_id=#{teacherId}
+          WHERE teach_id=#{teachId}
+       </update>
+       
+       
+       <!-- 删除 -->
+       <delete id="doRemove" parameterType="java.lang.Integer">
+           DELETE FROM teach WHERE teach_id=#{teachId}
+       </delete>
+       
+       
+    
+</mapper>            

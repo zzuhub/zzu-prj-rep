@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+            "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.zzu.wcj.dao.ICourseDAO">
+      <!-- 根据ID查询的信息更加全面 -->
+      <select id="findById" parameterType="java.lang.Integer" resultMap="CourseMap" >
+               SELECT course_id ,course_name ,credit ,note ,term
+               FROM course
+               WHERE  course_id=#{id}
+      </select>
+      <resultMap type="Course" id="CourseMap">
+             <id column="course_id" property="courseId"/>
+             <result column="course_name" property="courseName"/>
+             <result column="credit" property="credit"/>
+             <result column="note" property="note"/>
+             <result column="term" property="term"/>
+             <collection property="teachers" ofType="Teacher" 
+                          column="course_id" select="findTeachersByCourseId">
+             </collection>
+             <collection property="majors" ofType="Major" 
+                         column="course_id" select="findMajorsByCourseId">
+             </collection>
+      </resultMap>
+      <select id="findTeachersByCourseId" parameterType="java.lang.Integer" resultType="Teacher">
+              SELECT teacher_id teacherId , teacher_name teacherName
+              FROM teacher 
+              WHERE teacher_id =(
+                                   SELECT DISTINCT teacher_id
+                                   FROM teach 
+                                   WHERE course_id=#{courseId}
+              )
+      </select>
+      <select id="findMajorsByCourseId" parameterType="java.lang.Integer" resultType="Major">
+            SELECT major_id majorId,major_name majorName,note,create_time createTime
+            FROM major
+            WHERE major_id IN(
+                              SELECT major_id
+                              FROM clazz
+                              WHERE clazz_id IN(
+                                         SELECT clazz_id
+                                         FROM teach
+                                         WHERE course_id=#{courseId}
+                              )   
+            )
+      </select>
+      
+      
+      
+
+      <insert id="doCreate" parameterType="Course">
+         INSERT INTO course(course_id,course_name,note,term,credit)
+             VALUES(course_seq.NEXTVAL,#{courseName},#{note},#{term},#{credit})  
+      </insert>
+
+      <update id="doUpdate" parameterType="Course">
+            UPDATE course 
+			SET course_name=#{courseName},note=#{note},term=#{term},credit=#{credit}
+			WHERE course_id=#{courseId}
+      </update>
+      
+      <delete id="doRemove" parameterType="java.lang.Integer">
+            DELETE FROM course WHERE course_id=#{id}
+      </delete>
+      
+      <select id="findAll" parameterType="java.lang.String" resultType="Course">
+           SELECT course_id courseId, course_name courseName ,
+                  term,credit,note
+           FROM course
+           WHERE course_id LIKE #{keyWord} OR UPPER(course_name) LIKE #{keyWord}
+                 OR term LIKE #{keyWord} OR credit LIKE #{keyWord}
+                 OR UPPER(note) LIKE #{keyWord}
+           ORDER BY course_id   
+      </select>
+      
+      <!-- 使用Excel批量导入数据 -->      
+      <insert id="doCreateBatch" parameterType="java.util.List">
+            INSERT INTO course(course_id,course_name,note,term,credit)
+            SELECT course_seq.NEXTVAL,temp.*
+            FROM (
+	            <foreach collection="list" item="course" index="index" separator="UNION">
+	                 SELECT #{course.courseName},#{course.note},#{course.term},
+	                        #{course.credit}
+	                  FROM dual   
+	            </foreach>
+            )temp
+      </insert>
+
+      <!-- 删除课程时需要的子业务 -->
+      <!-- 删除分数 -->
+      <delete id="doRemoveScore" parameterType="java.lang.Integer">
+            DELETE FROM score WHERE course_id=#{courseId}
+      </delete>
+      <!-- 删除教学 -->
+      <delete id="doRemoveTeach" parameterType="java.lang.Integer">
+            DELETE FROM teach WHERE course_id=#{courseId}
+      </delete>
+      
+      <select id="findByTerm" parameterType="java.lang.Integer" resultType="Course">
+          SELECT  course_id courseId,course_name courseName,credit,note,term
+          FROM course
+          WHERE term=#{term}
+      </select>
+      
+      
+     
+       
+
+</mapper>            
